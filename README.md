@@ -34,9 +34,9 @@ REST API that performs data ingestion from CSV files into a PostgreSQL database.
 1. Clone the repository
 2. Set up the environment and install requirements:
   ```bash
-    python -m venv venv
-    source venv/bin/activate
-    pip install -r requirements.txt
+   python -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
 3. Run the API locally  (--reload for auto-reloading on code changes):
-    ```bash
-    uvicorn app.main:app
+   ```bash
+   uvicorn app.main:app
