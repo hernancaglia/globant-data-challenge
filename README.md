@@ -33,7 +33,7 @@ REST API that performs data ingestion from CSV files into a PostgreSQL database.
 
 1. Clone the repository
 2. Set up the environment and install requirements:
-  ```bash
+   ```bash
    python -m venv venv
    source venv/bin/activate
    pip install -r requirements.txt
