@@ -20,4 +20,6 @@ def read_root():
 @app.post("/upload-data")
 def upload_csv_data(db: Session = Depends(get_db)):
     crud.load_departments_from_csv("data/departments.csv", db)
+    crud.load_jobs_from_csv("data/jobs.csv", db)
+    crud.load_employees_from_csv("data/hired_employees.csv", db)
     return {"message": "Data uploaded successfully"}
