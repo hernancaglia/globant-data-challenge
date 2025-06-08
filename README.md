@@ -15,6 +15,7 @@ REST API that performs data ingestion from CSV files into a PostgreSQL database.
 - Section 2: Create reports using SQL
 - Bonus: Containerize the API
 - Bonus: Move to Cloud
+- Dynamically validate data fields
 
 ## Tech Stack
 
