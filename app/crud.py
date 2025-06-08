@@ -7,55 +7,60 @@ from datetime import datetime
 ERROR_LOG_PATH = "data/error_log_{}.csv"
 
 
-def _log_errors(df: pd.DataFrame, context: str):
-    if not df.empty:
+def _log_error_rows(rows: list[str], context: str):
+    if rows:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        df.to_csv(ERROR_LOG_PATH.format(f"{context}_{timestamp}"), index=False)
+        path = ERROR_LOG_PATH.format(f"{context}_{timestamp}")
+        with open(path, "w") as f:
+            f.writelines(rows)
 
 
 def load_departments_from_csv(path: str, db: Session):
+    raw_lines = open(path).readlines()
     df = pd.read_csv(path, header=None, names=["id", "department"])
     valid_rows = []
     error_rows = []
 
-    for _, row in df.iterrows():
-        if pd.notnull(row["id"]) and pd.notnull(row["department"]):
-            try:
+    for i, row in df.iterrows():
+        try:
+            if pd.notnull(row["id"]) and pd.notnull(row["department"]):
                 row["id"] = int(row["id"])
                 valid_rows.append(models.Department(id=row["id"], name=str(row["department"])))
-            except Exception:
-                error_rows.append(row)
-        else:
-            error_rows.append(row)
+            else:
+                error_rows.append(raw_lines[i])
+        except Exception:
+            error_rows.append(raw_lines[i])
 
     for obj in valid_rows:
         db.merge(obj)
     db.commit()
-    _log_errors(pd.DataFrame(error_rows), "departments")
+    _log_error_rows(error_rows, "departments")
 
 
 def load_jobs_from_csv(path: str, db: Session):
+    raw_lines = open(path).readlines()
     df = pd.read_csv(path, header=None, names=["id", "job"])
     valid_rows = []
     error_rows = []
 
-    for _, row in df.iterrows():
-        if pd.notnull(row["id"]) and pd.notnull(row["job"]):
-            try:
+    for i, row in df.iterrows():
+        try:
+            if pd.notnull(row["id"]) and pd.notnull(row["job"]):
                 row["id"] = int(row["id"])
                 valid_rows.append(models.Job(id=row["id"], title=str(row["job"])))
-            except Exception:
-                error_rows.append(row)
-        else:
-            error_rows.append(row)
+            else:
+                error_rows.append(raw_lines[i])
+        except Exception:
+            error_rows.append(raw_lines[i])
 
     for obj in valid_rows:
         db.merge(obj)
     db.commit()
-    _log_errors(pd.DataFrame(error_rows), "jobs")
+    _log_error_rows(error_rows, "jobs")
 
 
 def load_employees_from_csv(path: str, db: Session):
+    raw_lines = open(path).readlines()
     df = pd.read_csv(
         path,
         header=None,
@@ -69,7 +74,7 @@ def load_employees_from_csv(path: str, db: Session):
     valid_rows = []
     error_rows = []
 
-    for _, row in df.iterrows():
+    for i, row in df.iterrows():
         try:
             if all(pd.notnull([row[col] for col in ["id", "name", "datetime", "department_id", "job_id"]])):
                 valid_rows.append(models.Employee(
@@ -80,11 +85,11 @@ def load_employees_from_csv(path: str, db: Session):
                     job_id=int(row["job_id"])
                 ))
             else:
-                error_rows.append(row)
+                error_rows.append(raw_lines[i])
         except Exception:
-            error_rows.append(row)
+            error_rows.append(raw_lines[i])
 
     for obj in valid_rows:
         db.merge(obj)
     db.commit()
-    _log_errors(pd.DataFrame(error_rows), "employees")
+    _log_error_rows(error_rows, "employees")
