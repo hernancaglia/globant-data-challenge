@@ -13,6 +13,8 @@ REST API that performs data ingestion from CSV files into a PostgreSQL database.
 - Set up PostgreSQL on Docker
 - Create data ingestion pipeline
 - Section 2: Create reports using SQL
+- Bonus: Containerize the API
+- Bonus: Move to Cloud
 
 ## Tech Stack
 
