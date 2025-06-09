@@ -1,3 +1,13 @@
+"""
+Data ingestion functions for the Globant Data Challenge.
+
+This module handles:
+- Loading CSV data to the departments, jobs, and employees tables
+- Validating and inserting records into the database
+- Logging invalid rows to timestamped CSV files
+- Batch inserting up to 1000 employee records
+"""
+
 from datetime import datetime
 import pandas as pd
 from sqlalchemy.orm import Session
@@ -94,9 +104,20 @@ def load_employees_from_csv(path: str, db: Session):
     _log_error_rows(error_rows, "employees")
 
 
-def insert_employees_batch_from_csv(path: str, db: Session, limit: int = 1000) -> dict:
-    raw_lines = open(path).readlines()[:limit]
-    df = pd.read_csv(
+def insert_employees_batch_from_csv(path: str, db: Session, chunk_size: int = 100) -> dict:
+    """
+    Ingests employee records from a CSV file in continuous batches of `chunk_size`.
+
+    Args:
+        path (str): Path to the CSV file.
+        db (Session): SQLAlchemy DB session.
+        chunk_size (int): Number of records to process per batch.
+
+    Returns:
+        dict: Summary of inserted and failed rows across all batches.
+    """
+    raw_lines = open(path).readlines()
+    df_iterator = pd.read_csv(
         path,
         header=None,
         names=["id", "name", "datetime", "department_id", "job_id"],
@@ -104,34 +125,45 @@ def insert_employees_batch_from_csv(path: str, db: Session, limit: int = 1000) -
         infer_datetime_format=True,
         dayfirst=False,
         keep_date_col=True,
-        nrows=limit
+        chunksize=chunk_size
     )
 
-    valid_rows = []
-    error_rows = []
+    total_inserted = 0
+    total_failed = 0
+    all_errors = []
 
-    for i, row in df.iterrows():
-        try:
-            if all(pd.notnull([row[col] for col in ["id", "name", "datetime", "department_id", "job_id"]])):
-                valid_rows.append(models.Employee(
-                    id=int(row["id"]),
-                    name=str(row["name"]),
-                    hire_date=pd.to_datetime(row["datetime"]),
-                    department_id=int(row["department_id"]),
-                    job_id=int(row["job_id"])
-                ))
-            else:
+    for chunk in df_iterator:
+        valid_rows = []
+        error_rows = []
+
+        for i, row in chunk.iterrows():
+            try:
+                if all(pd.notnull([row[col] for col in ["id", "name", "datetime", "department_id", "job_id"]])):
+                    valid_rows.append(models.Employee(
+                        id=int(row["id"]),
+                        name=str(row["name"]),
+                        hire_date=pd.to_datetime(row["datetime"]),
+                        department_id=int(row["department_id"]),
+                        job_id=int(row["job_id"])
+                    ))
+                else:
+                    error_rows.append(raw_lines[i])
+            except Exception:
                 error_rows.append(raw_lines[i])
-        except Exception:
-            error_rows.append(raw_lines[i])
 
-    for obj in valid_rows:
-        db.merge(obj)
-    db.commit()
-    _log_error_rows(error_rows, "employees_batch")
+        for row in valid_rows:
+            db.merge(row)
+        db.commit()
+
+        total_inserted += len(valid_rows)
+        total_failed += len(error_rows)
+        all_errors.extend(error_rows)
+
+    _log_error_rows(all_errors, f"employees_full_batch_{chunk_size}")
 
     return {
-        "inserted": len(valid_rows),
-        "failed": len(error_rows),
-        "errors": error_rows
+        "inserted": total_inserted,
+        "failed": total_failed,
+        "errors": all_errors[:10]  # Limited error log in API response
     }
+

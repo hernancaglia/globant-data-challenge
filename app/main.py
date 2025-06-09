@@ -28,15 +28,25 @@ def upload_csv_data(db: Session = Depends(get_db)):
 
 @app.post("/employees/batch-from-csv")
 def insert_employees_batch_from_csv(
-    limit: int = Query(
-        1000,
+    chunk_size: int = Query(
+        100,
         ge=1,
         le=1000,
-        description="Number of rows to insert in the batch (1–1000)"
+        description="Number of rows to process per batch (1–1000)"
     ),
     db: Session = Depends(get_db)
 ):
+    """
+    Ingests all employee records from hired_employees.csv in chunks.
+
+    Args:
+        chunk_size (int): Number of records per batch (default: 100, max: 1000)
+        db (Session): SQLAlchemy DB session
+
+    Returns:
+        dict: Summary of inserted and failed rows
+    """
     path = "data/hired_employees.csv"
-    result = crud.insert_employees_batch_from_csv(path, db, limit=limit)
+    result = crud.insert_employees_batch_from_csv(path, db, chunk_size=chunk_size)
     return result
 
