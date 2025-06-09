@@ -1,8 +1,7 @@
+from datetime import datetime
 import pandas as pd
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
 from . import models
-from datetime import datetime
 
 ERROR_LOG_PATH = "data/error_log_{}.csv"
 
@@ -93,3 +92,46 @@ def load_employees_from_csv(path: str, db: Session):
         db.merge(obj)
     db.commit()
     _log_error_rows(error_rows, "employees")
+
+
+def insert_employees_batch_from_csv(path: str, db: Session, limit: int = 1000) -> dict:
+    raw_lines = open(path).readlines()[:limit]
+    df = pd.read_csv(
+        path,
+        header=None,
+        names=["id", "name", "datetime", "department_id", "job_id"],
+        parse_dates=["datetime"],
+        infer_datetime_format=True,
+        dayfirst=False,
+        keep_date_col=True,
+        nrows=limit
+    )
+
+    valid_rows = []
+    error_rows = []
+
+    for i, row in df.iterrows():
+        try:
+            if all(pd.notnull([row[col] for col in ["id", "name", "datetime", "department_id", "job_id"]])):
+                valid_rows.append(models.Employee(
+                    id=int(row["id"]),
+                    name=str(row["name"]),
+                    hire_date=pd.to_datetime(row["datetime"]),
+                    department_id=int(row["department_id"]),
+                    job_id=int(row["job_id"])
+                ))
+            else:
+                error_rows.append(raw_lines[i])
+        except Exception:
+            error_rows.append(raw_lines[i])
+
+    for obj in valid_rows:
+        db.merge(obj)
+    db.commit()
+    _log_error_rows(error_rows, "employees_batch")
+
+    return {
+        "inserted": len(valid_rows),
+        "failed": len(error_rows),
+        "errors": error_rows
+    }
