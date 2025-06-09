@@ -2,10 +2,10 @@
 Data ingestion functions for the Globant Data Challenge.
 
 This module handles:
-- Loading CSV data to the departments, jobs, and employees tables
+- Loading all CSV data for departments, jobs, and employees
 - Validating and inserting records into the database
 - Logging invalid rows to timestamped CSV files
-- Batch inserting up to 1000 employee records
+- Batch ingestion of employee data from a CSV file
 """
 
 from datetime import datetime
@@ -17,6 +17,13 @@ ERROR_LOG_PATH = "data/error_log_{}.csv"
 
 
 def _log_error_rows(rows: list[str], context: str):
+    """
+    Write invalid data rows to a CSV error log file with a timestamp.
+
+    Args:
+        rows (list[str]): Raw CSV lines that failed validation or conversion.
+        context (str): Identifier for the log filename.
+    """
     if rows:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         path = ERROR_LOG_PATH.format(f"{context}_{timestamp}")
@@ -25,6 +32,13 @@ def _log_error_rows(rows: list[str], context: str):
 
 
 def load_departments_from_csv(path: str, db: Session):
+    """
+    Load all department records from a CSV file into the database.
+
+    Args:
+        path (str): Path to the CSV file.
+        db (Session): SQLAlchemy DB session.
+    """
     raw_lines = open(path).readlines()
     df = pd.read_csv(path, header=None, names=["id", "department"])
     valid_rows = []
@@ -47,6 +61,13 @@ def load_departments_from_csv(path: str, db: Session):
 
 
 def load_jobs_from_csv(path: str, db: Session):
+    """
+    Load all job records from a CSV file into the database.
+
+    Args:
+        path (str): Path to the CSV file.
+        db (Session): SQLAlchemy DB session.
+    """
     raw_lines = open(path).readlines()
     df = pd.read_csv(path, header=None, names=["id", "job"])
     valid_rows = []
@@ -69,6 +90,13 @@ def load_jobs_from_csv(path: str, db: Session):
 
 
 def load_employees_from_csv(path: str, db: Session):
+    """
+    Load all employee records from a CSV file into the database.
+
+    Args:
+        path (str): Path to the CSV file.
+        db (Session): SQLAlchemy DB session.
+    """
     raw_lines = open(path).readlines()
     df = pd.read_csv(
         path,

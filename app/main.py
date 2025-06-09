@@ -1,15 +1,27 @@
+"""
+Main FastAPI application for the Globant Data Challenge.
+
+This module defines API endpoints for:
+- Uploading full historical data from CSV files
+- Batch ingestion of employee records from a CSV file
+
+Database tables are auto-created on startup using SQLAlchemy.
+"""
+
 from fastapi import FastAPI, Depends, Query
 from sqlalchemy.orm import Session
-from app import crud
 from app.database import get_db, engine
-from app import models
+from . import crud
+from . import models
 
 app = FastAPI()
 
 
-# Create all tables at startup
 @app.on_event("startup")
 def on_startup():
+    """
+    Create all database tables on app startup.
+    """
     models.Base.metadata.create_all(bind=engine)
 
 
@@ -20,6 +32,15 @@ def read_root():
 
 @app.post("/upload-data")
 def upload_csv_data(db: Session = Depends(get_db)):
+    """
+    Load full historical data from CSV files into the database.
+
+    - departments.csv
+    - jobs.csv
+    - hired_employees.csv
+
+    Any invalid rows are logged to separate timestamped error files.
+    """
     crud.load_departments_from_csv("data/departments.csv", db)
     crud.load_jobs_from_csv("data/jobs.csv", db)
     crud.load_employees_from_csv("data/hired_employees.csv", db)
